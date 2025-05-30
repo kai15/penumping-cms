@@ -56,6 +56,14 @@ const CATEGORY_COLORS = ['#6366F1', '#10B981', '#F59E42', '#EF4444', '#A21CAF'];
 const INCOME_COLOR = '#10B981';
 const EXPENSE_COLOR = '#EF4444';
 
+// Filter type options for chart
+const chartTypeOptions = [
+  { value: 'profit', label: 'Profit' },
+  { value: 'income', label: 'Income' },
+  { value: 'expense', label: 'Expense' },
+  { value: 'all', label: 'Semua' },
+];
+
 export default function Dashboard() {
   const [cashflow, setCashflow] = useState<any[]>([]);
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
@@ -64,6 +72,7 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
   const [chartType, setChartType] = useState<'bar' | 'line'>('line');
+  const [chartDataType, setChartDataType] = useState<'profit' | 'income' | 'expense' | 'all'>('profit');
 
   useEffect(() => {
     fetchData();
@@ -82,7 +91,7 @@ export default function Dashboard() {
     }
   };
 
-  // Data per bulan untuk chart
+  // Data per bulan untuk chart (filtered by chartDataType)
   const chartData = useMemo(() => {
     return months.map((m) => {
       const month = m.value;
@@ -106,6 +115,17 @@ export default function Dashboard() {
       };
     });
   }, [cashflow, chartYear, selectedCategory]);
+
+  // Filter chartData by chartDataType
+  const filteredChartData = useMemo(() => {
+    if (chartDataType === 'all') return chartData;
+    return chartData.map(d => {
+      if (chartDataType === 'income') return { ...d, expense: 0, profit: 0 };
+      if (chartDataType === 'expense') return { ...d, income: 0, profit: 0 };
+      if (chartDataType === 'profit') return { ...d, income: 0, expense: 0 };
+      return d;
+    });
+  }, [chartData, chartDataType]);
 
   // Data untuk card (total bulan & tahun terpilih)
   const summary = useMemo(() => {
@@ -186,9 +206,9 @@ export default function Dashboard() {
       return (
         <div className="bg-white p-2 border border-gray-200 rounded-lg shadow-sm text-xs">
           <p className="font-medium mb-1">{label}</p>
-          <p className="text-green-600">Income: Rp {payload[0].value.toLocaleString()}</p>
-          <p className="text-red-600">Expense: Rp {payload[1].value.toLocaleString()}</p>
-          <p className="text-blue-600">Profit: Rp {payload[2].value.toLocaleString()}</p>
+          <p className="text-green-600">Income: Rp {payload[0]?.value.toLocaleString()}</p>
+          <p className="text-red-600">Expense: Rp {payload[1]?.value.toLocaleString()}</p>
+          <p className="text-blue-600">Profit: Rp {payload[2]?.value.toLocaleString()}</p>
         </div>
       );
     }
@@ -214,7 +234,7 @@ export default function Dashboard() {
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
               >
                 {months.map(month => (
                   <option key={month.value} value={month.value}>{month.label}</option>
@@ -223,7 +243,7 @@ export default function Dashboard() {
               <select
                 value={selectedYear}
                 onChange={e => setSelectedYear(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
               >
                 {years.map(year => (
                   <option key={year.value} value={year.value}>{year.label}</option>
@@ -232,7 +252,7 @@ export default function Dashboard() {
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
               >
                 {categories.map(category => (
                   <option key={category.value} value={category.value}>{category.label}</option>
@@ -293,11 +313,11 @@ export default function Dashboard() {
             </div>
           </div>
           {/* Pie Chart Area: 2 Cards Side by Side */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Card 1: Pie Chart by Category */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center justify-center">
-              <h2 className="text-base font-semibold text-gray-800 mb-2">Distribusi Kategori</h2>
-              <ResponsiveContainer width="100%" height={320}>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center justify-center min-h-[140px]">
+              <h2 className="text-xs font-semibold text-gray-800 mb-0.5">Distribusi Kategori</h2>
+              <ResponsiveContainer width="98%" height={180}>
                 <PieChart>
                   <Pie
                     data={categoryPieData}
@@ -305,23 +325,25 @@ export default function Dashboard() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
+                    outerRadius={70}
                     label={({ name, value }) => `${name}: Rp ${Number(value).toLocaleString()}`}
+                    labelLine={true}
                     isAnimationActive={true}
+                    fontSize={10}
                   >
                     {categoryPieData.map((entry, idx) => (
                       <Cell key={`cell-cat-${idx}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  <Legend />
+                  <Legend verticalAlign="bottom" height={10} iconSize={10} wrapperStyle={{ fontSize: 10, margin: 0, padding: 0, textAlign: 'center' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             {/* Card 2: Pie Chart Income vs Expense */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center justify-center">
-              <h2 className="text-base font-semibold text-gray-800 mb-2">Income vs Expense</h2>
-              <ResponsiveContainer width="100%" height={320}>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center justify-center min-h-[140px]">
+              <h2 className="text-xs font-semibold text-gray-800 mb-0.5">Income vs Expense</h2>
+              <ResponsiveContainer width="98%" height={180}>
                 <PieChart>
                   <Pie
                     data={incomeExpensePieData}
@@ -329,16 +351,18 @@ export default function Dashboard() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
+                    outerRadius={70}
                     label={({ name, value }) => `${name}: Rp ${Number(value).toLocaleString()}`}
+                    labelLine={true}
                     isAnimationActive={true}
+                    fontSize={10}
                   >
                     {incomeExpensePieData.map((entry, idx) => (
                       <Cell key={`cell-inc-exp-${idx}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  <Legend />
+                  <Legend verticalAlign="bottom" height={10} iconSize={10} wrapperStyle={{ fontSize: 10, margin: 0, padding: 0, textAlign: 'center' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -347,13 +371,13 @@ export default function Dashboard() {
 
         {/* Chart with Year Filter */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 className="text-base font-semibold text-gray-800">Annual Financial Overview</h2>
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+            <h2 className="text-sm font-semibold text-gray-800">Annual Financial Overview</h2>
+            <div className="flex items-center gap-0.5">
               <select
                 value={chartYear}
                 onChange={e => setChartYear(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
               >
                 {years.map(year => (
                   <option key={year.value} value={year.value}>{year.label}</option>
@@ -362,16 +386,25 @@ export default function Dashboard() {
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
               >
                 {categories.map(category => (
                   <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
               </select>
+              <select
+                value={chartDataType}
+                onChange={e => setChartDataType(e.target.value as any)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-xs"
+              >
+                {chartTypeOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
               <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setChartType('bar')}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  className={`px-3 py-1 rounded-md text-xs transition-colors ${
                     chartType === 'bar' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -379,7 +412,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => setChartType('line')}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  className={`px-3 py-1 rounded-md text-xs transition-colors ${
                     chartType === 'line' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -388,11 +421,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="h-[400px]">
+          <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
                 <BarChart
-                  data={chartData}
+                  data={filteredChartData}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -400,19 +433,25 @@ export default function Dashboard() {
                   <YAxis stroke="#666" />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Bar dataKey="income" name="Income" fill="#10B981">
-                    <LabelList dataKey="income" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Bar>
-                  <Bar dataKey="expense" name="Expense" fill="#EF4444">
-                    <LabelList dataKey="expense" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Bar>
-                  <Bar dataKey="profit" name="Profit" fill="#6366F1">
-                    <LabelList dataKey="profit" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Bar>
+                  {(chartDataType === 'all' || chartDataType === 'income') && (
+                    <Bar dataKey="income" name="Income" fill="#10B981">
+                      <LabelList dataKey="income" position="insideTop" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Bar>
+                  )}
+                  {(chartDataType === 'all' || chartDataType === 'expense') && (
+                    <Bar dataKey="expense" name="Expense" fill="#EF4444">
+                      <LabelList dataKey="expense" position="insideTop" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Bar>
+                  )}
+                  {(chartDataType === 'all' || chartDataType === 'profit') && (
+                    <Bar dataKey="profit" name="Profit" fill="#6366F1">
+                      <LabelList dataKey="profit" position="insideTop" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Bar>
+                  )}
                 </BarChart>
               ) : (
                 <LineChart
-                  data={chartData}
+                  data={filteredChartData}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -420,15 +459,21 @@ export default function Dashboard() {
                   <YAxis stroke="#666" />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Line type="monotone" dataKey="income" name="Income" stroke="#10B981" strokeWidth={2}>
-                    <LabelList dataKey="income" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Line>
-                  <Line type="monotone" dataKey="expense" name="Expense" stroke="#EF4444" strokeWidth={2}>
-                    <LabelList dataKey="expense" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Line>
-                  <Line type="monotone" dataKey="profit" name="Profit" stroke="#6366F1" strokeWidth={2}>
-                    <LabelList dataKey="profit" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} />
-                  </Line>
+                  {(chartDataType === 'all' || chartDataType === 'income') && (
+                    <Line type="monotone" dataKey="income" name="Income" stroke="#10B981" strokeWidth={2}>
+                      <LabelList dataKey="income" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Line>
+                  )}
+                  {(chartDataType === 'all' || chartDataType === 'expense') && (
+                    <Line type="monotone" dataKey="expense" name="Expense" stroke="#EF4444" strokeWidth={2}>
+                      <LabelList dataKey="expense" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Line>
+                  )}
+                  {(chartDataType === 'all' || chartDataType === 'profit') && (
+                    <Line type="monotone" dataKey="profit" name="Profit" stroke="#6366F1" strokeWidth={2}>
+                      <LabelList dataKey="profit" position="top" formatter={(v: number) => `Rp ${Number(v).toLocaleString()}`} style={{ fontSize: 9 }} />
+                    </Line>
+                  )}
                 </LineChart>
               )}
             </ResponsiveContainer>

@@ -56,7 +56,7 @@ export function CashflowTable({
   selectedCategory,
   setSelectedCategory
 }: CashflowTableProps) {
-  const [sortField, setSortField] = useState<SortField>('total');
+  const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [startDate, endDate] = dateRange;
 
